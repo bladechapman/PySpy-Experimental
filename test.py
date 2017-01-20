@@ -1,28 +1,20 @@
-from pyspy import observe, PySpyBase
+from pyspy import observe, Observable
 
-class Test2(PySpyBase):
+class Test2(Observable):
+
     test_val4 = 4
 
     def __init__(self):
         self.test_val3 = 3
-        super().__init__()
-
-    def __getattribute__(self, name):
-        # print("GET:", name)
-        return super().__getattribute__(name)
-
-    def __setattr__(self, name, value):
-        # print("SET:", name, value)
-        return super().__setattr__(name, value)
+        Observable.reveal(self)
 
 
-class Test(PySpyBase):
+class Test(Observable):
     def __init__(self):
-
         self.test_val = 1
         self.test_val2 = 2
         self.chained_test = Test2()
-        super().__init__()
+        Observable.reveal(self)
 
     @observe("test_val")
     @observe("test_val2")
