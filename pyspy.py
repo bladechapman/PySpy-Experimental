@@ -1,17 +1,8 @@
 from functools import wraps
 import inspect
 
-#TODO: Build chained hasattr for decorator
 #TODO: Build in observation of function attributes
-
-def chained_hasattr(obj, prop_str):
-    properties = prop_str.split(".")
-    for p in properties:
-        if hasattr(obj, p):
-            obj = getattr(obj, p)
-        else:
-            return False
-    return True
+#TODO: Build in observation of collection attributes (dicts, arrays, ...)
 
 def chained_getattr(obj, prop_str):
     properties = prop_str.split(".")
