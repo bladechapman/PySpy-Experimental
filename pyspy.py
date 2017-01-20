@@ -15,6 +15,9 @@ def chained_hasattr(obj, prop_str):
 
 def chained_getattr(obj, prop_str):
     properties = prop_str.split(".")
+    if properties == [""]:
+        return obj
+
     for p in properties:
         if hasattr(obj, p):
             obj = getattr(obj, p)
@@ -25,8 +28,8 @@ def chained_getattr(obj, prop_str):
 def observe(prop_str):
     def wrap(f):
         if not hasattr(f, "__observed_attributes"):
-            f.__observed_attributes = set()
-        f.__observed_attributes.add(prop_str)
+            f.__observed_attributes = []
+        f.__observed_attributes.append(prop_str.split("."))
         return f
     return wrap
 
@@ -40,22 +43,25 @@ class PySpyBase(object):
             if hasattr(j, "__observed_attributes") == True)
 
         for f_name, handler in handler_functions:
-            for attribute_name in getattr(handler, "__observed_attributes"):
+            for prop_str in getattr(handler, "__observed_attributes"):
+                obj = chained_getattr(self, ".".join(prop_str[:-1]))
+                prop = prop_str[-1]
 
-                if attribute_name not in self.registered_attributes:
-                    self.registered_attributes[attribute_name] = []
-                self.registered_attributes[attribute_name].append((f_name, handler))
+                if prop not in obj.registered_attributes:
+                    obj.registered_attributes[prop] = []
+                obj.registered_attributes[prop].append((f_name, handler))
 
                 # # TODO: Allow default initial value to be specified in decorator
-                # if not hasattr(self, attribute_name):
-                #     setattr(self, attribute_name, None)
-                # value = getattr(self, attribute_name)
+                # if not hasattr(self, prop_str):
+                #     setattr(self, prop_str, None)
+                # value = getattr(self, prop_str)
 
     def __setattr__(self, name, value):
         if not hasattr(self, "registered_attributes") or \
             name not in super().__getattribute__("registered_attributes"):
             return super().__setattr__(name, value)
         else:
+            r = super().__setattr__(name, value)
             for f_name, handler in super().__getattribute__("registered_attributes")[name]:
                 handler()
-            return super().__setattr__(name, value)
+            return r
