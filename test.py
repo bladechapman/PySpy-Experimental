@@ -1,4 +1,4 @@
-from pyspy import observe, Observable
+from pyspy import observe, ignore, Observable
 
 class Test2(Observable):
 
@@ -8,28 +8,47 @@ class Test2(Observable):
         self.test_val3 = 3
         Observable.reveal(self)
 
+    def test_f4(self):
+        print("INVOKED TEST_F4")
+        return 4
+
 
 class Test(Observable):
     def __init__(self):
-        self.test_val = 1
-        self.test_val2 = 2
+        # self.chained_test = None
         self.chained_test = Test2()
+        self.test_val = 3
         Observable.reveal(self)
 
-    @observe("test_val")
-    @observe("test_val2")
+    # @observe("chained_test")
+    # @observe("test_val")
+    def test_f1(self):
+        pass
+        # if self.chained_test is not None:
+        #     observe("chained_test.test_val3")(self.test_f2)
+        #     Observable.reveal(self)
+        # else:
+        #     ignore("chained_test.test_val3")(self.test_f2)
+        #     Observable.reveal(self)
+
+    @observe("chained_test.test_f4")
     @observe("chained_test.test_val3")
-    @observe("chained_test.test_val4")
-    def test(self):
-        print("HANDLER:", \
-            self.test_val, \
-            self.test_val2,
-            self.chained_test.test_val3,
-            self.chained_test.test_val4)
+    @observe("test_f3")
+    def test_f2(self, values):
+        print("INVOKED TEST_F2", values)
+
+    def test_f3(self):
+        print("INVOKED TEST_F3")
+        return 1
 
 
-t = Test()
-t.test_val = 2
-t.test_val2 = 3
-t.chained_test.test_val3 = 4
-t.chained_test.test_val4 = 5
+t1 = Test()
+
+# print(t1.test_f2.__observed_attributes)
+
+# print(t1.test_f3)
+t1.test_f3()
+# t1.chained_test.test_f4()
+
+# t1.test_val = 45
+# t1.chained_test.test_val3 = 321
