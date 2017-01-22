@@ -1,54 +1,48 @@
-from pyspy import observe, ignore, Observable
+from pyspy import observe, ignore, Observable, observed_function
 
 class Test2(Observable):
-
-    test_val4 = 4
-
     def __init__(self):
-        self.test_val3 = 3
+        self.test_val = 3
         Observable.reveal(self)
 
-    def test_f4(self):
-        print("INVOKED TEST_F4")
-        return 4
+    @observe("test_val")
+    def serialize(self, values=None):
+        print("Test2 serialize")
+        return {"test2": self.test_val}
+
+    # @observe("serialize")
+    # def secondary(self, values=None):
+    #     print("SECONDARY", values)
 
 
 class Test(Observable):
     def __init__(self):
-        # self.chained_test = None
-        self.chained_test = Test2()
-        self.test_val = 3
+        self.complex_object = Test2()
         Observable.reveal(self)
 
-    # @observe("chained_test")
-    # @observe("test_val")
-    def test_f1(self):
-        pass
-        # if self.chained_test is not None:
-        #     observe("chained_test.test_val3")(self.test_f2)
-        #     Observable.reveal(self)
-        # else:
-        #     ignore("chained_test.test_val3")(self.test_f2)
-        #     Observable.reveal(self)
+    # @observe("complex_object")
+    # def init_complex_object(self, values=None):
+    #     if self.complex_object is not None:
+    #         observe("complex_object.serialize")(self.serialize)
+    #         Observable.reveal(self)
+    #     else:
+    #         ignore("complex_object.serialize")(self.serialize)
+    #         Observable.reveal(self)
 
-    @observe("chained_test.test_f4")
-    @observe("chained_test.test_val3")
-    @observe("test_f3")
-    def test_f2(self, values):
-        print("INVOKED TEST_F2", values)
-
-    def test_f3(self):
-        print("INVOKED TEST_F3")
-        return 1
+    @observe("complex_object.serialize")
+    def serialize2(self, values=None):
+        print("Test serialize")
 
 
 t1 = Test()
+# print(t1.serialize2.__observed_attributes)
+# print(t1.registered_attributes)
+# t2 = Test2()
+# t1.complex_object = t2
+t1.complex_object.test_val = 5
 
-# print(t1.test_f2.__observed_attributes)
+# t2 = Test2()
+# t2.test_val = 3
+# t2.serialize()
 
-# print(t1.test_f3)
-t1.test_f3()
-# t1.chained_test.test_f4()
-
-# t1.test_val = 45
-# t1.chained_test.test_val3 = 321
+# t2.serialize()

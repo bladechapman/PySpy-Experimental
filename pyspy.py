@@ -35,7 +35,7 @@ def ignore(prop_str):
 def observed_function(f):
     @wraps(f)
     def modified_function(self, *args, **kwargs):
-        print(f.__name__)
+        print("MODIFIED FUNCTION CALLED")
         result = f(*args, **kwargs)
         if f.__name__ in self.registered_attributes:
             for f_name, handler, registered_name in self.registered_attributes[f.__name__]:
@@ -48,14 +48,14 @@ class Observable(object):
     def reveal(instance):
         instance.registered_attributes = dict()
 
-        handler_functions = \
+        # Look for observed functions and overwrite them using observable_function
+        # decorator
+        original_handlers = \
             ((i, j) for (i, j) in inspect.getmembers(instance, inspect.ismethod) \
             if hasattr(j, "__observed_attributes") == True)
-
-        for f_name, handler in handler_functions:
+        for f_name, handler in original_handlers:
             for prop_str in getattr(handler, "__observed_attributes"):
                 prop_components = prop_str.split(".")
-
                 obj = chained_getattr(instance, ".".join(prop_components[:-1]))
                 prop = prop_components[-1]
 
@@ -66,13 +66,25 @@ class Observable(object):
                 if callable(getattr(obj, prop)):
                     f = observed_function(getattr(obj, prop))
                     bound_f = f.__get__(obj, type(obj))
-                    setattr(obj, prop, bound_f)
+                    object.__setattr__(obj, prop, bound_f)
+
+        # Register the handlers, using the overwritten bound functions
+        new_handlers = \
+            ((i, j) for (i, j) in inspect.getmembers(instance, inspect.ismethod) \
+            if hasattr(j, "__observed_attributes") == True)
+        for f_name, handler in new_handlers:
+            for prop_str in getattr(handler, "__observed_attributes"):
+                prop_components = prop_str.split(".")
+                obj = chained_getattr(instance, ".".join(prop_components[:-1]))
+                prop = prop_components[-1]
+
+                if not isinstance(obj, Observable):
+                    raise TypeError("Object not observable")
 
                 # Register the property
                 if prop not in obj.registered_attributes:
                     obj.registered_attributes[prop] = []
                 obj.registered_attributes[prop].append((f_name, handler, prop_str))
-
 
     @staticmethod
     def conceal(instance):
