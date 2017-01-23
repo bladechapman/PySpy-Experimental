@@ -1,5 +1,6 @@
 from functools import wraps
 import inspect
+import gc
 
 #TODO: Build in observation of collection attributes (dicts, arrays, ...)
 
@@ -35,10 +36,13 @@ def ignore(prop_str):
 def observed_function(f):
     @wraps(f)
     def modified_function(self, *args, **kwargs):
-        print("MODIFIED FUNCTION CALLED")
+        print("MODIFIED FUNCTION CALLED", f)
         result = f(*args, **kwargs)
         if f.__name__ in self.registered_attributes:
-            for f_name, handler, registered_name in self.registered_attributes[f.__name__]:
+            for f_name, obj, registered_name in self.registered_attributes[f.__name__]:
+                handler = getattr(obj, f_name)
+                if not callable(handler):
+                    raise Exception("Handler not callable")
                 handler(values={registered_name:result})
     return modified_function
 
@@ -69,10 +73,10 @@ class Observable(object):
                     object.__setattr__(obj, prop, bound_f)
 
         # Register the handlers, using the overwritten bound functions
-        new_handlers = \
+        handlers = \
             ((i, j) for (i, j) in inspect.getmembers(instance, inspect.ismethod) \
             if hasattr(j, "__observed_attributes") == True)
-        for f_name, handler in new_handlers:
+        for f_name, handler in handlers:
             for prop_str in getattr(handler, "__observed_attributes"):
                 prop_components = prop_str.split(".")
                 obj = chained_getattr(instance, ".".join(prop_components[:-1]))
@@ -83,8 +87,8 @@ class Observable(object):
 
                 # Register the property
                 if prop not in obj.registered_attributes:
-                    obj.registered_attributes[prop] = []
-                obj.registered_attributes[prop].append((f_name, handler, prop_str))
+                    obj.registered_attributes[prop] = set()
+                obj.registered_attributes[prop].add((f_name, instance, prop_str))
 
     @staticmethod
     def conceal(instance):
@@ -96,6 +100,9 @@ class Observable(object):
             return super().__setattr__(name, value)
         else:
             r = super().__setattr__(name, value)
-            for f_name, handler, registered_name in super().__getattribute__("registered_attributes")[name]:
+            for f_name, obj, registered_name in super().__getattribute__("registered_attributes")[name]:
+                handler = getattr(obj, f_name)
+                if not callable(handler):
+                    raise Exception("Handler not callable")
                 handler(values={registered_name:getattr(self, name)})
             return r
