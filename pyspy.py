@@ -44,6 +44,8 @@ def observed_function(f):
                 if not callable(handler):
                     raise Exception("Handler not callable")
                 handler(values={registered_name:result})
+
+    modified_function.__handler__ = True
     return modified_function
 
 
@@ -67,7 +69,8 @@ class Observable(object):
                     raise TypeError("Object not observable")
 
                 # Handle bound functions
-                if callable(getattr(obj, prop)):
+                if callable(getattr(obj, prop)) and \
+                    not hasattr(getattr(obj, prop), "__handler__"):
                     f = observed_function(getattr(obj, prop))
                     bound_f = f.__get__(obj, type(obj))
                     object.__setattr__(obj, prop, bound_f)

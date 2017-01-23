@@ -25,12 +25,10 @@ class Test(Observable):
         if self.complex_object is not None:
             print("SET")
             observe("complex_object.serialize")(self.serialize2)
-            # Observable.reveal(self.complex_object)
             Observable.reveal(self)
         else:
             print("REMOVE")
             ignore("complex_object.serialize")(self.serialize2)
-            # Observable.reveal(self.complex_object)
             Observable.reveal(self)
 
     @observe("complex_object.serialize")
@@ -39,15 +37,6 @@ class Test(Observable):
 
 
 t1 = Test()
-# print(t1.serialize2.__observed_attributes)
-# print(t1.registered_attributes)
 t2 = Test2()
 t1.complex_object = t2
 t1.complex_object.test_val = 5
-
-# t2 = Test2()
-# t2.test_val = 3
-# print("FDASFS")
-# t2.serialize()
-
-# t2.serialize()
