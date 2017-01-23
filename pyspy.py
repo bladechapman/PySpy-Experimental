@@ -2,7 +2,10 @@ from functools import wraps
 import inspect
 import gc
 
+#TODO: Fix ignore
+#TODO: Add ability to specify handler priority
 #TODO: Build in observation of collection attributes (dicts, arrays, ...)
+#TODO: Clean this code up a bit...
 
 def chained_getattr(obj, prop_str):
     properties = prop_str.split(".")
@@ -16,22 +19,42 @@ def chained_getattr(obj, prop_str):
             raise AttributeError(obj, "does not have attribute", prop_str)
     return obj
 
+def is_bound_method(f):
+    return hasattr(f, "__self__")
+
 def observe(prop_str=None):
     def wrap(f):
-        if not hasattr(f, "__observed_attributes"):
-            f.__observed_attributes = set()
-        if prop_str is not None and prop_str not in f.__observed_attributes:
-            f.__observed_attributes.add(prop_str)
-        return f
+        if is_bound_method(f):
+            g = f.__func__
+            if not hasattr(g, "__observed_attributes"):
+                g.__observed_attributes = set()
+            if prop_str is not None and prop_str not in g.__observed_attributes:
+                g.__observed_attributes.add(prop_str)
+            return f
+        else:
+            if not hasattr(f, "__observed_attributes"):
+                f.__observed_attributes = set()
+            if prop_str is not None and prop_str not in f.__observed_attributes:
+                f.__observed_attributes.add(prop_str)
+            return f
     return wrap
 
-def ignore(prop_str):
-    def wrap(f):
-        if hasattr(f, "__observed_attributes"):
-            if prop_str in f.__observed_attributes:
-                f.__observed_attributes.remove(prop_str)
-        return f
-    return wrap
+# This needs to take an instance as a param
+# Modify the current instance's observation, as well as the instance where the
+# original property is being looked at
+def ignore(prop_str, f, instance):
+    pass
+    # if not isinstance(instance, Observable):
+    #     raise TypeError("Properties can only be ignored on instance of Observable")
+    #
+    # if hasattr(f, "__observed_attributes"):
+    #     if prop_str in f.__observed_attributes:
+    #         f.__observed_attributes.remove(prop_str)
+    #
+    # prop_components = prop_str.split(".")
+    # obj = chained_getattr(instance, ".".join(prop_components[:-1]))
+    # Observable.reveal(obj)
+
 
 def observed_function(f):
     @wraps(f)
@@ -108,4 +131,6 @@ class Observable(object):
                 if not callable(handler):
                     raise Exception("Handler not callable")
                 handler(values={registered_name:getattr(self, name)})
+
+
             return r
