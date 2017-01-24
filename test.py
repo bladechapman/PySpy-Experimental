@@ -1,48 +1,35 @@
-from pyspy import observe, ignore, Observable
+from pyspy import observe, ignore, ObservableValue, ObservableFunction
 
-class Test2(Observable):
-    def __init__(self):
-        self.test_val = 3
-        Observable.reveal(self)
+# class Test():
+#     def __init__(self):
+#         self.test_val = 3
+#
+#     @observe("test_val")
+#     def serialize(self, values=None):
+#         print("Test serialize")
+#         return {"test": self.test_val}
+#
+# t = Test()
+# t.test_val = 4
 
-    @observe("test_val")
-    def serialize(self, values=None):
-        print("Test2 serialize")
-        return {"test2": self.test_val}
+t = ObservableValue(2)
 
-    # @observe("serialize")
-    # def secondary(self, values=None):
-    #     print("SECONDARY", values)
+def handler():
+    print("HANDLED")
 
+handler = observe(t)(handler)
 
-class Test(Observable):
-    def __init__(self):
-        self.complex_object = None
-        Observable.reveal(self)
+def handler2():
+    print("HANDLED 2")
 
-    @observe("complex_object")
-    def init_complex_object(self, values=None):
-        if self.complex_object is not None:
-            print("SET")
-            observe("complex_object.serialize")(self.serialize2)
-            Observable.reveal(self)
-        else:
-            print("REMOVE")
-            # ignore("complex_object.serialize", self.serialize2, self)
-            # Observable.reveal(self)
+handler = ObservableFunction(handler)
+handler2 = observe(handler)(handler2)
 
-    # @observe()
-    def serialize2(self, values=None):
-        print("Test serialize")
+def handler3():
+    print("HANDLED 3")
 
+handler2 = ObservableFunction(handler2)
+handler3 = observe(handler2)(handler3)
 
-t1 = Test()
-t2 = Test2()
-t1.complex_object = t2
-t1.complex_object.test_val = 5
-
-# print("SET NONE")
-# t1.complex_object = None
-# print("SET NONE DONE")
-# Observable.reveal(t2)
-# t2.test_val = 6
+print("---")
+t.set(4)

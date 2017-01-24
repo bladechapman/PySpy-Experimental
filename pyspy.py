@@ -22,21 +22,36 @@ def chained_getattr(obj, prop_str):
 def is_bound_method(f):
     return hasattr(f, "__self__")
 
-def observe(prop_str=None):
-    def wrap(f):
-        if is_bound_method(f):
-            g = f.__func__
-            if not hasattr(g, "__observed_attributes"):
-                g.__observed_attributes = set()
-            if prop_str is not None and prop_str not in g.__observed_attributes:
-                g.__observed_attributes.add(prop_str)
-            return f
+def is_handler(f):
+    if is_bound_method(f):
+        f = f.__func__
+    return hasattr(f, "_observing")
+
+
+
+
+def observe(observable):
+    def wrap(handler):
+        nonlocal observable
+        if not isinstance(observable, Observable):
+            raise TypeError("Given observable must be instance of Observable")
+
+        # retrieve the underlying function
+        f = None
+        if isinstance(handler, ObservableFunction):
+            f = handler.__func__
         else:
-            if not hasattr(f, "__observed_attributes"):
-                f.__observed_attributes = set()
-            if prop_str is not None and prop_str not in f.__observed_attributes:
-                f.__observed_attributes.add(prop_str)
-            return f
+            f = handler
+
+        # if not handler, promote
+        if not is_handler(f):
+            f._observing = dict()
+
+        # build link, no double registering
+        f._observing[observable] = {"type": "reference"}
+        observable.register_handler(handler)
+
+        return handler
     return wrap
 
 # This needs to take an instance as a param
@@ -56,81 +71,45 @@ def ignore(prop_str, f, instance):
     # Observable.reveal(obj)
 
 
-def observed_function(f):
-    @wraps(f)
-    def modified_function(self, *args, **kwargs):
-        print("MODIFIED FUNCTION CALLED", f)
-        result = f(*args, **kwargs)
-        if f.__name__ in self.registered_attributes:
-            for f_name, obj, registered_name in self.registered_attributes[f.__name__]:
-                handler = getattr(obj, f_name)
-                if not callable(handler):
-                    raise Exception("Handler not callable")
-                handler(values={registered_name:result})
 
-    modified_function.__handler__ = True
-    return modified_function
 
 
 class Observable(object):
-    @staticmethod
-    def reveal(instance):
-        instance.registered_attributes = dict()
+    def __init__(self):
+        self._handlers = set()
 
-        # Look for observed functions and overwrite them using observable_function
-        # decorator
-        original_handlers = \
-            ((i, j) for (i, j) in inspect.getmembers(instance, inspect.ismethod) \
-            if hasattr(j, "__observed_attributes") == True)
-        for f_name, handler in original_handlers:
-            for prop_str in getattr(handler, "__observed_attributes"):
-                prop_components = prop_str.split(".")
-                obj = chained_getattr(instance, ".".join(prop_components[:-1]))
-                prop = prop_components[-1]
-
-                if not isinstance(obj, Observable):
-                    raise TypeError("Object not observable")
-
-                # Handle bound functions
-                if callable(getattr(obj, prop)) and \
-                    not hasattr(getattr(obj, prop), "__handler__"):
-                    f = observed_function(getattr(obj, prop))
-                    bound_f = f.__get__(obj, type(obj))
-                    object.__setattr__(obj, prop, bound_f)
-
-        # Register the handlers, using the overwritten bound functions
-        handlers = \
-            ((i, j) for (i, j) in inspect.getmembers(instance, inspect.ismethod) \
-            if hasattr(j, "__observed_attributes") == True)
-        for f_name, handler in handlers:
-            for prop_str in getattr(handler, "__observed_attributes"):
-                prop_components = prop_str.split(".")
-                obj = chained_getattr(instance, ".".join(prop_components[:-1]))
-                prop = prop_components[-1]
-
-                if not isinstance(obj, Observable):
-                    raise TypeError("Object not observable")
-
-                # Register the property
-                if prop not in obj.registered_attributes:
-                    obj.registered_attributes[prop] = set()
-                obj.registered_attributes[prop].add((f_name, instance, prop_str))
-
-    @staticmethod
-    def conceal(instance):
-        instance.registered_attributes = dict()
-
-    def __setattr__(self, name, value):
-        if not hasattr(self, "registered_attributes") or \
-            name not in super().__getattribute__("registered_attributes"):
-            return super().__setattr__(name, value)
-        else:
-            r = super().__setattr__(name, value)
-            for f_name, obj, registered_name in super().__getattribute__("registered_attributes")[name]:
-                handler = getattr(obj, f_name)
-                if not callable(handler):
-                    raise Exception("Handler not callable")
-                handler(values={registered_name:getattr(self, name)})
+    def register_handler(self, f):
+        self._handlers.add(f)
 
 
-            return r
+class ObservableFunction(Observable):
+    def __init__(self, f):
+        super().__init__()
+        self.__func__ = f
+
+        if is_handler(self.__func__):
+            for observee in self.__func__._observing:
+                observee._handlers.remove(self.__func__)
+                observee._handlers.add(self)
+
+    def __call__(self):
+        returned_value = self.__func__()
+        # invoke _handlers
+        for handler in self._handlers:
+            handler()
+
+
+class ObservableValue(Observable):
+    def __init__(self, value):
+        super().__init__()
+        self.__value = value
+
+    def get(self):
+        return self.__value
+
+    def set(self, value):
+        self.__value = value
+
+        # invoke _handlers
+        for handler in self._handlers:
+            handler()
