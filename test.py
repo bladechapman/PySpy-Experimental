@@ -1,16 +1,5 @@
 from pyspy import observe, ignore, ObservableValue, ObservableFunction
 
-# class Test():
-#     def __init__(self):
-#         self.test_val = 3
-#
-#     @observe("test_val")
-#     def serialize(self, values=None):
-#         print("Test serialize")
-#         return {"test": self.test_val}
-#
-# t = Test()
-# t.test_val = 4
 
 t = ObservableValue(2)
 
@@ -33,3 +22,7 @@ handler3 = observe(handler2)(handler3)
 
 print("---")
 t.set(4)
+print("---")
+
+# handler = ignore(t)(handler)
+# t.set(5)

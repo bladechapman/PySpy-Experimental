@@ -27,12 +27,8 @@ def is_handler(f):
         f = f.__func__
     return hasattr(f, "_observing")
 
-
-
-
 def observe(observable):
     def wrap(handler):
-        nonlocal observable
         if not isinstance(observable, Observable):
             raise TypeError("Given observable must be instance of Observable")
 
@@ -54,21 +50,30 @@ def observe(observable):
         return handler
     return wrap
 
-# This needs to take an instance as a param
-# Modify the current instance's observation, as well as the instance where the
-# original property is being looked at
-def ignore(prop_str, f, instance):
-    pass
-    # if not isinstance(instance, Observable):
-    #     raise TypeError("Properties can only be ignored on instance of Observable")
-    #
-    # if hasattr(f, "__observed_attributes"):
-    #     if prop_str in f.__observed_attributes:
-    #         f.__observed_attributes.remove(prop_str)
-    #
-    # prop_components = prop_str.split(".")
-    # obj = chained_getattr(instance, ".".join(prop_components[:-1]))
-    # Observable.reveal(obj)
+def ignore(observable):
+    def wrap(handler):
+        if not isinstance(observable, Observable):
+            raise TypeError("Given observable must be instance of Observable")
+
+        # retrive the underlying function
+        f = None
+        if isinstance(handler, ObservableFunction):
+            f = handler.__func__
+        else:
+            f = handler
+
+        # provided handler must be a handler function
+        if not is_handler(f):
+            raise Exception("The provided handler is not actually a handler")
+
+        # remove the handler from the observables it's observing
+        # remove the observable from the handler's observing list
+        for observing in f._observing:
+            observing._handlers.remove(handler)
+        del f._observing[observable]
+
+        return handler
+    return wrap
 
 
 
