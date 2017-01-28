@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pyspy import observe, ignore, setup
-from pyspy import ObservableValue, ObservableFunction
+from pyspy import ObservableValue, ObservableFunction, Observable
 
 
 # t = ObservableValue(2)
@@ -86,3 +86,35 @@ from pyspy import ObservableValue, ObservableFunction
 #
 # t3 = Test3()
 # t3.test3.test2.set(345)
+
+
+class Test4(object):
+    def __init__(self):
+        self.test3 = 123
+
+class Test5(object):
+    @setup
+    def __init__(self):
+        self.test4 = None
+
+    @observe("test4", is_class=True)
+    def handler1(self):
+        # TODO: investigate possibility of memory leak
+        if self.test4.get() is not None:
+            print("OBS")
+            o = self.test4.get().test3
+            self.test4.get().test3 = ObservableValue(self.test4.get().test3)
+            observe(self.test4.get().test3)(self.handler2)
+
+    def handler2(self):
+        print("HANDLER2")
+
+t5 = Test5()
+t4 = Test4()
+t5.test4.set(t4)
+t4.test3.set(345)
+
+t5.test4.set(None)
+
+# need to clean up handler at some point, maybe pass as parameters?
+t4.test3.set(567)

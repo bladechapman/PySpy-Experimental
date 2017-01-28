@@ -3,6 +3,8 @@ import inspect
 import gc
 import operator
 
+
+#TODO: Define parameters passed to handlers (current_val, old_val)
 #TODO: Add ability to specify handler priority
 #TODO: Build in observation of collection attributes (dicts, arrays, ...)
 #TODO: Clean this code up a bit...
@@ -37,6 +39,9 @@ def is_handler(f):
         f = f.__func__
     return hasattr(f, "_observing")
 
+def is_bound_method(f):
+    return hasattr(f, "__self__")
+
 def observe(observable, is_class=False):
     def wrap(handler):
         if not isinstance(observable, Observable) and is_class == False:
@@ -46,7 +51,7 @@ def observe(observable, is_class=False):
 
         # retrieve the underlying function
         f = None
-        if isinstance(handler, ObservableFunction):
+        if isinstance(handler, ObservableFunction) or is_bound_method(handler):
             f = handler.__func__
         else:
             f = handler
