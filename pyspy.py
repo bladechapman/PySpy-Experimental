@@ -19,6 +19,16 @@ def chained_getattr(obj, prop_str):
             raise AttributeError(obj, "does not have attribute", prop_str)
     return obj
 
+def chained_setattr(obj, prop_str, value):
+    properties = prop_str.split(".")
+
+    for p in properties[:-1]:
+        if hasattr(obj, p):
+            obj = getattr(obj, p)
+        else:
+            raise AttributeError(obj, "does not have attribute", prop_str)
+    setattr(obj, properties[-1], value)
+
 def is_bound_method(f):
     return hasattr(f, "__self__")
 
@@ -115,9 +125,9 @@ def setup(init_func):
                 if t not in observed:
                     observed[t] = []
                 observed[t].append(h)
-        observed_functions = {i:observed[i] for i in observed if callable(getattr(self, i))}
-        observed_attributes = {i:observed[i] for i in observed if not callable(getattr(self, i))}
-        root_observed_functions = {i:observed_functions[i] for i in observed_functions if not is_handler(getattr(self, i))}
+        observed_functions = {i:observed[i] for i in observed if callable(chained_getattr(self, i))}
+        observed_attributes = {i:observed[i] for i in observed if not callable(chained_getattr(self, i))}
+        root_observed_functions = {i:observed_functions[i] for i in observed_functions if not is_handler(chained_getattr(self, i))}
         root_observed = {i:observed[i] for i in observed if i in root_observed_functions or i in observed_attributes}
 
 
@@ -131,16 +141,17 @@ def setup(init_func):
 
         # initialize observables in order
         for observed_name, order in ordering:
-            a = getattr(self, observed_name)
+            a = chained_getattr(self, observed_name)
 
             # set observables
-            v = None
-            if callable(a):
-                v = ObservableFunction(a)
-                setattr(self, observed_name, v)
-            else:
-                v = ObservableValue(a)
-                setattr(self, observed_name, v)
+            v = chained_getattr(self, observed_name)
+            if not isinstance(v, Observable):
+                if callable(a):
+                    v = ObservableFunction(a)
+                    chained_setattr(self, observed_name, v)
+                else:
+                    v = ObservableValue(a)
+                    chained_setattr(self, observed_name, v)
 
             # correct and register handlers...
             for handler in observed[observed_name]:
