@@ -78,6 +78,8 @@ def ignore(observable):
         return handler
     return wrap
 
+
+
 # TODO: GET RID OF THIS OR SOMETHING
 def build_observed_ordering_for_root_node(node, ordering, init_val, observed):
     if node.__name__ not in observed:
@@ -88,7 +90,6 @@ def build_observed_ordering_for_root_node(node, ordering, init_val, observed):
 
     for h in observed[node.__name__]:
         build_observed_ordering_for_root_node(h, ordering, init_val + 1, observed)
-
 
 def setup(init_func):
     @wraps(init_func)
@@ -119,121 +120,37 @@ def setup(init_func):
         root_observed_functions = {i:observed_functions[i] for i in observed_functions if not is_handler(getattr(self, i))}
         root_observed = {i:observed[i] for i in observed if i in root_observed_functions or i in observed_attributes}
 
-        # print(observed_attributes)
-        # print(root_observed_functions)
-        # print(root_observed)
-
 
         # topological sort from root nodes
         observed_ordering = {i:0 for i in observed}
         for i in root_observed:
-            if not callable(getattr(self, i)):
-                # setattr(self, i, ObservableValue(getattr(self, i)))
-                pass
             for h in observed[i]:
-                # setattr(self, i, ObservableValue(getattr(self, i)))
                 build_observed_ordering_for_root_node(h, observed_ordering, 1, observed)
-        # print(observed_ordering)
-
         ordering = sorted(observed_ordering.items(), key=operator.itemgetter(1))
 
 
         # initialize observables in order
         for observed_name, order in ordering:
             a = getattr(self, observed_name)
-            # print(a)
 
-            # register handlers...
-            # print(observed_name)
+            # set observables
             v = None
             if callable(a):
                 v = ObservableFunction(a)
                 setattr(self, observed_name, v)
-                # for handler in observed[observed_name]:
-                #     del handler._observing[observed_name]
-                #     handler._observing[v] = {"type": "reference"}
-                #     v.register_handler(handler)
             else:
                 v = ObservableValue(a)
                 setattr(self, observed_name, v)
-                # for handler in observed[observed_name]:
-                #     del handler._observing[observed_name]
-                #     handler._observing[v] = {"type": "reference"}
-                #     v.register_handler(handler)
 
+            # correct and register handlers...
             for handler in observed[observed_name]:
                 del handler._observing[observed_name]
                 handler._observing[v] = {"type": "reference"}
                 v.register_handler(handler)
 
-
-                    # print(handler._observing)
-                # print(observed[observed_name])
-
-
-            # val = 1
-            # for h in handlers:
-            #     h_name = h.__name__
-            #     observed_ordering[h_name] = val
-            #
-            #     print(h_name)
-                # print(observed_attributes[i])
-
-            # for h_name in root_observed[i]:
-                # print(h_name)
-                # h = getattr(self, h_name)
-                # print(h)
-                # print(h._observing)
-
-            # print(root_observed[i])
-            # # v = 1
-            # while root_observed[i]
-
-
-
-
-        # print(getattr(self, 'test_func')._observing)
-
-        # # replace attributes first, since they can't be observing anything
-        # for a_s in observed_attributes:
-        #     a = getattr(self, a_s)
-        #     o_a = ObservableValue(a)
-        #     setattr(self, a_s, o_a)
-        #
-        #     # change string references to this observed attribute to actual references
-        #     for h in observed_attributes[a_s]:
-        #         del h._observing[a_s]
-        #         h._observing[o_a] = {"type": "reference"}
-        #         o_a.register_handler(h)
-        #
-        # # topological sort based on distance from root observable?
-
-
-        # # TODO
-        # # convert observed_attributes
-        # for a_s in observed_attributes:
-        #     # TODO: Change this to chained getattr
-        #     a = getattr(self, a_s)
-        #
-        #     o_a = None
-        #     if callable(a):
-        #         # TODO: Check to see how this works w/ bound functions
-        #         # error occurs when a is handler and a._observing still contais string references...
-        #         o_a = ObservableFunction(a) # a needs to be
-        #     else:
-        #         o_a = ObservableValue(a)
-        #
-        #     # replace normal attribute w/ observable version
-        #     setattr(self, a_s, o_a)
-        #
-        #     # change string references to actual references
-        #     for h in observed_attributes[a_s]:
-        #         del h._observing[a_s]
-        #         o_a.register_handler(h)
-        #         h._observing[o_a] = {"type": "reference"}
-
-
     return modified_init_func
+
+
 
 
 class Observable(object):

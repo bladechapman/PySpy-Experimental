@@ -43,22 +43,18 @@ class Test(object):
     def test_func3(self):
         print("test_func3")
 
-    # @observe("test", is_class=True)
-    # def test_func(self):
-    #     print("test_func")
-    #
-    # @observe("test_func", is_class=True)
-    # def handler(self):
-    #     print("handler")
+    @observe("test", is_class=True)
+    def test_func(self):
+        print("test_func")
+
+    @observe("test_func", is_class=True)
+    def handler(self):
+        print("handler")
 
 
 
 
 print("---")
 t = Test(123)
-# t.test.set(3)
-# t.test_func()
-
-# t.test.set(345)
-
+t.test.set(345)
 t.test_fun2()
