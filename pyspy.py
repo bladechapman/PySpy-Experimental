@@ -4,7 +4,7 @@ import gc
 import operator
 
 
-#TODO: Identify parameters for handler by observed value
+#TODO: Clean up API
 #TODO: Add ability to specify handler priority
 #TODO: Build in observation of collection attributes (dicts, arrays, ...)
 #TODO: Clean this code up a bit...
@@ -42,7 +42,7 @@ def is_handler(f):
 def is_bound_method(f):
     return hasattr(f, "__self__")
 
-def observe(observable, is_class=False):
+def observe(observable, is_class=False, name=None):
     def wrap(handler):
         if not isinstance(observable, Observable) and is_class == False:
             raise TypeError("Given observable must be instance of Observable if not used in class")
@@ -61,7 +61,8 @@ def observe(observable, is_class=False):
             f._observing = dict()
 
         # build link, no double registering
-        f._observing[observable] = {"type": "reference" if isinstance(observable, Observable) else "string"}
+        f._observing[observable] = {"type": "reference" if isinstance(observable, Observable) else "string", \
+            "name": name if name is not None else observable}
         if isinstance(observable, Observable):
             observable.register_handler(handler)
 
@@ -160,9 +161,9 @@ def setup(init_func):
 
             # correct and register handlers...
             for handler in observed[observed_name]:
+                n = handler._observing[observed_name]["name"]
                 del handler._observing[observed_name]
-                # handler._observing[v] = {"type": "reference", "name": observed_name}
-                handler._observing[v] = {"type": "reference"}
+                handler._observing[v] = {"type": "reference", "name": n}
                 v.register_handler(handler)
 
     return modified_init_func
@@ -190,11 +191,19 @@ class ObservableFunction(Observable):
                 observee._handlers.remove(self.__func__)
                 observee._handlers.add(self)
 
-    def __call__(self):
-        returned_value = self.__func__()
+    def __call__(self, *args, **kwargs):
+        returned_value = self.__func__(*args, **kwargs)
+
         # invoke _handlers
         for handler in self._handlers:
-            handler(new_val=returned_value, old_val=self._old_ret)
+
+            f = handler
+            if is_bound_method(f) or isinstance(handler, Observable):
+                f = handler.__func__
+            n = f._observing[self]["name"]
+
+            handler(new_val={"name": n, "value": returned_value},
+                old_val={"name": n, "value":  self._old_ret})
 
         self._old_ret = returned_value
 
@@ -214,6 +223,11 @@ class ObservableValue(Observable):
 
         # invoke _handlers
         for handler in self._handlers:
-            # name = handler._observing[self]["name"]
-            # handler(new_val={name: self.__value}, old_val={name: self._old_value})
-            handler(new_val=self.__value, old_val=self._old_value)
+
+            f = handler
+            if is_bound_method(f) or isinstance(handler, Observable):
+                f = handler.__func__
+            n = f._observing[self]["name"]
+
+            handler(new_val={"name": n, "value": self.__value},
+                old_val={"name": n, "value": self._old_value})
