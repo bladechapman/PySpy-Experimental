@@ -35,26 +35,27 @@ from pyspy import ObservableValue, ObservableFunction, Observable
 #     def __init__(self, t):
 #         self.test = t
 #
-#     def test_fun2(self):
-#         print("test_func2")
-#
-#     @observe("test_fun2", is_class=True)
-#     def test_func3(self):
-#         print("test_func3")
+#     # def test_fun2(self):
+#     #     print("test_func2")
+#     #
+#     # @observe("test_fun2", is_class=True)
+#     # def test_func3(self):
+#     #     print("test_func3")
 #
 #     @observe("test", is_class=True)
-#     def test_func(self):
+#     def test_func(self, new_val=None, old_val=None):
+#         print(new_val, old_val)
 #         print("test_func")
 #
-#     @observe("test_func", is_class=True)
-#     def handler(self):
-#         print("handler")
+#     # @observe("test_func", is_class=True)
+#     # def handler(self):
+#     #     print("handler")
 #
 #
 #
 # t = Test(123)
 # t.test.set(345)
-# t.test_fun2()
+# # t.test_fun2()
 
 
 # class Test2(object):
@@ -88,33 +89,50 @@ from pyspy import ObservableValue, ObservableFunction, Observable
 # t3.test3.test2.set(345)
 
 
-class Test4(object):
-    def __init__(self):
-        self.test3 = 123
+# class Test4(object):
+#     def __init__(self):
+#         self.test3 = 123
+#
+# class Test5(object):
+#     @setup
+#     def __init__(self):
+#         self.test4 = None
+#
+#     @observe("test4", is_class=True)
+#     def handler1(self):
+#         # TODO: investigate possibility of memory leak
+#         if self.test4.get() is not None:
+#             print("OBS")
+#             o = self.test4.get().test3
+#             self.test4.get().test3 = ObservableValue(self.test4.get().test3)
+#             observe(self.test4.get().test3)(self.handler2)
+#
+#     def handler2(self):
+#         print("HANDLER2")
+#
+# t5 = Test5()
+# t4 = Test4()
+# t5.test4.set(t4)
+# t4.test3.set(345)
+#
+# t5.test4.set(None)
+#
+# # need to clean up handler at some point
+# t4.test3.set(567)
 
-class Test5(object):
+
+class Test6(object):
     @setup
     def __init__(self):
-        self.test4 = None
+        self.test_val = 123
+        self.test_val2 = "ABC"
 
-    @observe("test4", is_class=True)
-    def handler1(self):
-        # TODO: investigate possibility of memory leak
-        if self.test4.get() is not None:
-            print("OBS")
-            o = self.test4.get().test3
-            self.test4.get().test3 = ObservableValue(self.test4.get().test3)
-            observe(self.test4.get().test3)(self.handler2)
+    @observe("test_val", is_class=True)
+    @observe("test_val2", is_class=True)
+    def handler(self, old_val=None, new_val=None):
+        print("HANDLING")
+        print(old_val, new_val)
 
-    def handler2(self):
-        print("HANDLER2")
-
-t5 = Test5()
-t4 = Test4()
-t5.test4.set(t4)
-t4.test3.set(345)
-
-t5.test4.set(None)
-
-# need to clean up handler at some point, maybe pass as parameters?
-t4.test3.set(567)
+t = Test6()
+t.test_val.set(345)
+t.test_val2.set("DEF")

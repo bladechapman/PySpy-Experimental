@@ -4,7 +4,7 @@ import gc
 import operator
 
 
-#TODO: Define parameters passed to handlers (current_val, old_val)
+#TODO: Identify parameters for handler by observed value
 #TODO: Add ability to specify handler priority
 #TODO: Build in observation of collection attributes (dicts, arrays, ...)
 #TODO: Clean this code up a bit...
@@ -161,6 +161,7 @@ def setup(init_func):
             # correct and register handlers...
             for handler in observed[observed_name]:
                 del handler._observing[observed_name]
+                # handler._observing[v] = {"type": "reference", "name": observed_name}
                 handler._observing[v] = {"type": "reference"}
                 v.register_handler(handler)
 
@@ -182,6 +183,7 @@ class ObservableFunction(Observable):
     def __init__(self, f):
         super().__init__()
         self.__func__ = f
+        self._old_ret = None
 
         if is_handler(self.__func__):
             for observee in self.__func__._observing:
@@ -192,20 +194,26 @@ class ObservableFunction(Observable):
         returned_value = self.__func__()
         # invoke _handlers
         for handler in self._handlers:
-            handler()
+            handler(new_val=returned_value, old_val=self._old_ret)
+
+        self._old_ret = returned_value
 
 
 class ObservableValue(Observable):
     def __init__(self, value):
         super().__init__()
         self.__value = value
+        self._old_value = None
 
     def get(self):
         return self.__value
 
     def set(self, value):
+        self._old_value = self.__value
         self.__value = value
 
         # invoke _handlers
         for handler in self._handlers:
-            handler()
+            # name = handler._observing[self]["name"]
+            # handler(new_val={name: self.__value}, old_val={name: self._old_value})
+            handler(new_val=self.__value, old_val=self._old_value)
