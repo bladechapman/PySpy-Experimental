@@ -5,9 +5,8 @@ import operator
 
 
 #TODO: Clean up API
-#TODO: Add ability to specify handler priority
+#TODO: Write tests
 #TODO: Build in observation of collection attributes (dicts, arrays, ...)
-#TODO: Clean this code up a bit...
 
 def chained_getattr(obj, prop_str):
     properties = prop_str.split(".")
@@ -94,8 +93,6 @@ def ignore(observable):
         return handler
     return wrap
 
-
-
 # TODO: GET RID OF THIS OR SOMETHING
 def build_observed_ordering_for_root_node(node, ordering, init_val, observed):
     if node.__name__ not in observed:
@@ -179,7 +176,6 @@ class Observable(object):
         self._handlers.add(f)
 
 
-# TODO: Handle arguments, bound functions
 class ObservableFunction(Observable):
     def __init__(self, f):
         super().__init__()
@@ -202,8 +198,8 @@ class ObservableFunction(Observable):
                 f = handler.__func__
             n = f._observing[self]["name"]
 
-            handler(new_val={"name": n, "value": returned_value},
-                old_val={"name": n, "value":  self._old_ret})
+            handler(new={"name": n, "value": returned_value},
+                old={"name": n, "value":  self._old_ret})
 
         self._old_ret = returned_value
 
@@ -229,5 +225,5 @@ class ObservableValue(Observable):
                 f = handler.__func__
             n = f._observing[self]["name"]
 
-            handler(new_val={"name": n, "value": self.__value},
-                old_val={"name": n, "value": self._old_value})
+            handler(new={"name": n, "value": self.__value},
+                old={"name": n, "value": self._old_value})

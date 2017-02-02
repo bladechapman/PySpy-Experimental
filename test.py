@@ -1,36 +1,12 @@
 #!/usr/bin/env python3
-from pyspy import observe, ignore, setup
-from pyspy import ObservableValue, ObservableFunction, Observable
+# from pyspy import observe, ignore, setup
+# from pyspy import ObservableValue, ObservableFunction, Observable
 
+# from test_basic import TestBasicUsage
+#
+# import unittest
+# unittest.main()
 
-# t = ObservableValue(2)
-#
-# def handler(new_val=None, old_val=None):
-#     print(new_val, old_val)
-#     print("HANDLED")
-#     return new_val["value"]
-#
-# handler = observe(t)(handler)
-#
-# def handler2(new_val=None, old_val=None):
-#     print(new_val, old_val)
-#     print("HANDLED 2")
-#
-# handler = ObservableFunction(handler)
-# handler2 = observe(handler)(handler2)
-#
-# def handler3():
-#     print("HANDLED 3")
-#
-# handler2 = ObservableFunction(handler2)
-# handler3 = observe(handler2)(handler3)
-#
-# t.set(4)
-#
-# handler = ignore(t)(handler)
-# t.set(5)
-#
-# print("-----")
 #
 # class Test(object):
 #
