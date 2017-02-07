@@ -70,11 +70,9 @@ def ignore(observable):
             raise TypeError("Given observable must be instance of Observable")
 
         # retrive the underlying function
-        f = None
-        if isinstance(handler, ObservableFunction):
-            f = handler.__func__
-        else:
-            f = handler
+        f = handler
+        while hasattr(f, "__func__"):
+            f = getattr(f, "__func__")
 
         # provided handler must be a handler function
         if not is_handler(f):
