@@ -1,6 +1,5 @@
 from functools import wraps
 import inspect
-import gc
 import operator
 
 
@@ -37,9 +36,6 @@ def is_handler(f):
     if is_bound_method(f):
         f = f.__func__
     return hasattr(f, "_observing")
-
-def is_bound_method(f):
-    return hasattr(f, "__self__")
 
 def observe(observable, is_class=False, name=None):
     def wrap(handler):

@@ -127,6 +127,26 @@ class TestClassUsage(unittest.TestCase):
         self.assertEqual(t.handler1_called, True)
         self.assertEqual(t.handler2_called, True)
 
+    def test_nested_observe(self):
+        class Test2(object):
+            def __init__(self):
+                self.value2 = 3
+
+        class Test1(object):
+            @setup
+            def __init__(self):
+                self.value = Test2()
+                self.handler_fired = False
+
+            @observe("value.value2", is_class=True)
+            def handler(self, old=None, new=None):
+                self.handler_fired = True
+
+        t = Test1()
+        t.value.value2.set(4)
+        self.assertTrue(t.handler_fired)
+        self.assertEqual(t.value.value2.get(), 4)
+
     def test_lazy_observe_ignore(self):
 
         class Test1(object):
