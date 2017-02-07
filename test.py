@@ -2,39 +2,13 @@
 # from pyspy import observe, ignore, setup
 # from pyspy import ObservableValue, ObservableFunction, Observable
 
-# from test_basic import TestBasicUsage
-#
-# import unittest
-# unittest.main()
+import unittest
+from tests.test_basic import TestBasicUsage
+from tests.test_class import TestClassUsage
 
-#
-# class Test(object):
-#
-#     @setup
-#     def __init__(self, t):
-#         self.test = t
-#
-#     # def test_fun2(self):
-#     #     print("test_func2")
-#     #
-#     # @observe("test_fun2", is_class=True)
-#     # def test_func3(self):
-#     #     print("test_func3")
-#
-#     @observe("test", is_class=True)
-#     def test_func(self, new_val=None, old_val=None):
-#         print(new_val, old_val)
-#         print("test_func")
-#
-#     # @observe("test_func", is_class=True)
-#     # def handler(self):
-#     #     print("handler")
-#
-#
-#
-# t = Test(123)
-# t.test.set(345)
-# # t.test_fun2()
+unittest.main()
+
+
 #
 #
 # class Test2(object):

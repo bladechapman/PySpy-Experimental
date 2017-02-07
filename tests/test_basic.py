@@ -40,18 +40,6 @@ class TestBasicUsage(unittest.TestCase):
         value()
         self.assertTrue(handler_triggered)
 
-
-
-
-
-
-        # value = ObservableFunction()
-        #
-        # def handler(new=None, old=None):
-        #     print("HANDLE")
-        #
-        # handler = observe(value)(handler)
-
     def test_chained_value(self):
         handler1_triggered = False
         handler2_triggered = False
