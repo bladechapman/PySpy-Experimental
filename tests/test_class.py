@@ -148,7 +148,6 @@ class TestClassUsage(unittest.TestCase):
         self.assertEqual(t.value.value2.get(), 4)
 
     def test_lazy_observe_ignore(self):
-
         class Test1(object):
             @setup
             def __init__(self):

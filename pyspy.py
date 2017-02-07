@@ -45,11 +45,9 @@ def observe(observable, is_class=False, name=None):
             raise TypeError("Observable must be string reference if used in class")
 
         # retrieve the underlying function
-        f = None
-        if isinstance(handler, ObservableFunction) or is_bound_method(handler):
-            f = handler.__func__
-        else:
-            f = handler
+        f = handler
+        while hasattr(f, "__func__"):
+            f = getattr(f, "__func__")
 
         # if not handler, promote
         if not is_handler(f):
@@ -58,6 +56,8 @@ def observe(observable, is_class=False, name=None):
         # build link, no double registering
         f._observing[observable] = {"type": "reference" if isinstance(observable, Observable) else "string", \
             "name": name if name is not None else observable}
+        # in the case of classes, this might be a string, so observables
+        # are registered at init time
         if isinstance(observable, Observable):
             observable.register_handler(handler)
 
