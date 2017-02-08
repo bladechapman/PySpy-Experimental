@@ -87,8 +87,7 @@ def ignore(observable):
         return handler
     return wrap
 
-# TODO: GET RID OF THIS OR SOMETHING
-def build_observed_ordering_for_root_node(node, ordering, init_val, observed):
+def top_sort(node, ordering, init_val, observed):
     if node.__name__ not in observed:
         return
 
@@ -96,7 +95,7 @@ def build_observed_ordering_for_root_node(node, ordering, init_val, observed):
         ordering[node.__name__] = init_val
 
     for h in observed[node.__name__]:
-        build_observed_ordering_for_root_node(h, ordering, init_val + 1, observed)
+        top_sort(h, ordering, init_val + 1, observed)
 
 def setup(init_func):
     @wraps(init_func)
@@ -110,7 +109,7 @@ def setup(init_func):
         # at this point the handlers only have string references to their targets
         #   2. change string references to actual references
 
-
+        # print(inspect.getmembers(self, inspect.ismethod))
         unmodified_handler_functions = [(i, j) for (i, j) \
             in inspect.getmembers(self, inspect.ismethod) \
             if is_handler(j)]
@@ -132,7 +131,7 @@ def setup(init_func):
         observed_ordering = {i:0 for i in observed}
         for i in root_observed:
             for h in observed[i]:
-                build_observed_ordering_for_root_node(h, observed_ordering, 1, observed)
+                top_sort(h, observed_ordering, 1, observed)
         ordering = sorted(observed_ordering.items(), key=operator.itemgetter(1))
 
 
@@ -160,7 +159,24 @@ def setup(init_func):
     return modified_init_func
 
 
+class ContainsObservables(object):
+    def _oget(self, n):
+        return super().__getattribute__(n)
 
+    def _oset(self, n, v):
+        super().__getattribute__(n, v)
+
+    def __getattribute__(self, n):
+        if isinstance(super().__getattribute__(n), ObservableValue):
+            return super().__getattribute__(n).get()
+        else:
+            return super().__getattribute__(n)
+
+    def __setattr__(self, n, v):
+        if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
+            super().__getattribute__(n).set(v)
+        else:
+            return super().__setattr__(n, v)
 
 class Observable(object):
     def __init__(self):
