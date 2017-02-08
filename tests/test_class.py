@@ -1,5 +1,5 @@
-from pyspy import ObservableValue, ObservableFunction, ContainsObservables
-from pyspy import observe, ignore, setup
+from src.decorators import *
+from src.types import *
 import unittest
 
 class TestClassUsage(unittest.TestCase):
