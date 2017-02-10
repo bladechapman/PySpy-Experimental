@@ -1,19 +1,47 @@
 from .helpers import *
 
 class ContainsObservables(object):
+    def __init__(self):
+        object.__setattr__(self, "marked", dict())
+
     def _oget(self, n):
         return super().__getattribute__(n)
 
     def _oset(self, n, v):
         super().__getattribute__(n, v)
 
+    def __delattr__(self, n):
+        if n in self.marked and hasattr(self, n):
+            # TODO: ignore
+            pass
+        object.__delattr__(self, n)
+
     def __getattribute__(self, n):
         if isinstance(super().__getattribute__(n), ObservableValue):
-            return super().__getattribute__(n).get()
+            return object.__getattribute__(self, n).get()
         else:
-            return super().__getattribute__(n)
+            return object.__getattribute__(self, n)
 
     def __setattr__(self, n, v):
+        if n in self.marked and not hasattr(self, n):
+            # set up observable
+            full_str, handlers = self.marked[n]
+
+            if callable(v):
+                o = ObservableFunction(v)
+            else:
+                o = ObservableValue(v)
+
+            # TODO: verify that the naming is correct, especially for nested
+            for handler in handlers:
+                o.register_handler(handler)
+                if n in handler._observing:
+                    del handler._observing[n]
+                handler._observing[o] = {"type": "reference", "name": n}
+
+            object.__setattr__(self, n, o)
+
+
         if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
             super().__getattribute__(n).set(v)
         else:

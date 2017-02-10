@@ -38,3 +38,10 @@ def top_sort(node, ordering, init_val, observed):
 
     for h in observed[node.__name__]:
         top_sort(h, ordering, init_val + 1, observed)
+
+def add_default_handler_for(string, obj, handlers):
+    components = string.split(".")
+    if components[0] not in obj.marked:
+        obj.marked[components[0]] = dict()
+
+    obj.marked[components[0]] = (string, handlers)

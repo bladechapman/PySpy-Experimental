@@ -84,8 +84,12 @@ def setup(init_func):
                 observed[t].append(h)
                 observed_type[t] = h._observing[t]["mode"]
 
-        # do something w/ deferred observations here...
+        # do something w/ default observations here...
         # ...
+        for observee in observed:
+            handlers = observed[observee]
+            add_default_handler_for(observee, self, handlers)
+
 
         observed_functions = {i:observed[i] for i in observed if observed_type[i] != "deferred" and callable(chained_getattr(self, i))}
         observed_attributes = {i:observed[i] for i in observed if observed_type[i] != "deferred" and not callable(chained_getattr(self, i))}

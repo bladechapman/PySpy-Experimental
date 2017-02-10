@@ -13,7 +13,9 @@ class TestPrototype(unittest.TestCase):
 
             @setup
             def __init__(self):
+                super().__init__()
                 # self.value = 3
+
                 pass
 
             @observe("value", is_class=True, deferred=True)
@@ -22,5 +24,7 @@ class TestPrototype(unittest.TestCase):
 
         t = Test()
         t.value = 4
+        del t.value
+        t.value = 5
 
 unittest.main()
