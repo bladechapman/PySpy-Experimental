@@ -1,6 +1,11 @@
+
 from .helpers import *
 
+
 class ContainsObservables(object):
+    def __init__(self):
+        self._marked = dict()
+
     def _oget(self, n):
         return super().__getattribute__(n)
 
@@ -18,6 +23,7 @@ class ContainsObservables(object):
             super().__getattribute__(n).set(v)
         else:
             return super().__setattr__(n, v)
+
 
 class Observable(object):
     def __init__(self):
@@ -70,10 +76,10 @@ class ObservableValue(Observable):
 
         # invoke _handlers
         for handler in self._handlers:
-
             f = handler
             if is_bound_method(f) or isinstance(handler, Observable):
                 f = handler.__func__
+
             n = f._observing[self]["name"]
 
             handler(new={"name": n, "value": self.__value},

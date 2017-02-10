@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+import unittest
+from pyspy import *
+# from tests.test_basic import TestBasicUsage
+# from tests.test_class import TestClassUsage
+
+class TestPrototyping(unittest.TestCase):
+
+    def test_prototype(self):
+        class Test1(ContainsObservables):
+            @setup
+            def __init__(self):
+                self.value = None
+                # self.value3 = 3
+                self.value4 = 4
+                self.test2_being_observed = False
+                self.handler_fired = False
+
+                super().__init__()
+
+
+            @observe("value4", is_class=True)
+            def handler3(self, new=None, old=None):
+                print("ASHDA")
+
+            @observe("value4", is_class=True)
+            def handler2(self, new=None, old=None):
+                print("HSDAFA")
+
+
+            # @observe("value.value2", is_class=True, deferred=True)
+            # def handler(self, new=None, old=None):
+            #     print("ASDF")
+
+        class Test2(ContainsObservables):
+            def __init__(self):
+                self.value2 = 3
+
+        t = Test1()
+        t.value4 = 5
+        # t.value = Test2()
+        # t.value.value2 = 4
+        # self.assertTrue(t.test2_being_observed)
+        # self.assertTrue(t.handler_fired)
+        # t.value = None
+        # self.assertFalse(t.test2_being_observed)
+
+unittest.main()
+
+
+# @observe("value", is_class=True)
+# def handle_assignment(self, new=None, old=None):
+#     if new["value"] is not None:
+#         new["value"].value2 = ObservableValue(new["value"].value2)
+#         observe(new["value"].value2)(self.handler)
+#         self.test2_being_observed = True
+#     else:
+#         ignore(old["value"].value2)(self.handler)
+#         old["value"].value2 = old["value"].value2.get()
+#         self.test2_being_observed = False
