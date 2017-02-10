@@ -4,7 +4,7 @@ import operator
 from .helpers import *
 from .types import *
 
-def observe(observable, is_class=False, name=None):
+def observe(observable, is_class=False, name=None, deferred=True):
     def wrap(handler):
         if not isinstance(observable, Observable) and is_class == False:
             raise TypeError("Given observable must be instance of Observable if not used in class")
@@ -21,7 +21,11 @@ def observe(observable, is_class=False, name=None):
             f._observing = dict()
 
         # build link, no double registering
-        f._observing[observable] = {"type": "reference" if isinstance(observable, Observable) else "string", \
+        f._observing[observable] = { \
+            "mode": \
+                "reference" if isinstance(observable, Observable) else
+                "string" if deferred == False else \
+                "deferred", \
             "name": name if name is not None else observable}
         # in the case of classes, this might be a string, so observables
         # are registered at init time
@@ -66,20 +70,25 @@ def setup(init_func):
         # at this point the handlers only have string references to their targets
         #   2. change string references to actual references
 
-        # print(inspect.getmembers(self, inspect.ismethod))
         unmodified_handler_functions = [(i, j) for (i, j) \
             in inspect.getmembers(self, inspect.ismethod) \
             if is_handler(j)]
 
         # gather observed attributes
         observed = dict()
+        observed_type = dict()
         for n, h in unmodified_handler_functions:
             for t in h._observing:
                 if t not in observed:
                     observed[t] = []
                 observed[t].append(h)
-        observed_functions = {i:observed[i] for i in observed if callable(chained_getattr(self, i))}
-        observed_attributes = {i:observed[i] for i in observed if not callable(chained_getattr(self, i))}
+                observed_type[t] = h._observing[t]["mode"]
+
+        # do something w/ deferred observations here...
+        # ...
+
+        observed_functions = {i:observed[i] for i in observed if observed_type[i] != "deferred" and callable(chained_getattr(self, i))}
+        observed_attributes = {i:observed[i] for i in observed if observed_type[i] != "deferred" and not callable(chained_getattr(self, i))}
         root_observed_functions = {i:observed_functions[i] for i in observed_functions if not is_handler(chained_getattr(self, i))}
         root_observed = {i:observed[i] for i in observed if i in root_observed_functions or i in observed_attributes}
 
@@ -94,6 +103,9 @@ def setup(init_func):
 
         # initialize observables in order
         for observed_name, order in ordering:
+            if observed_type[observed_name] == "deferred":
+                continue
+
             a = chained_getattr(self, observed_name)
 
             # set observables
@@ -110,7 +122,7 @@ def setup(init_func):
             for handler in observed[observed_name]:
                 n = handler._observing[observed_name]["name"]
                 del handler._observing[observed_name]
-                handler._observing[v] = {"type": "reference", "name": n}
+                handler._observing[v] = {"mode": "reference", "name": n}
                 v.register_handler(handler)
 
     return modified_init_func
