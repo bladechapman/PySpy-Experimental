@@ -6,10 +6,13 @@ def setup_default_test(self, n, v):
         # set up observable
         full_str, handlers = self.marked[n]
 
-        if callable(v):
-            o = ObservableFunction(v)
+        if v is not isinstance(v, Observable):
+            if callable(v):
+                o = ObservableFunction(v)
+            else:
+                o = ObservableValue(v)
         else:
-            o = ObservableValue(v)
+            o = v
 
         # TODO: verify that the naming is correct, especially for nested
         if len(full_str.split(".")) == 1 and full_str == n:
