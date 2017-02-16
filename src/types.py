@@ -1,8 +1,43 @@
 from .helpers import *
 
+# TODO: clean this up...
+def setup_default_test(self, n, v):
+    if n in self.marked and n not in self.setup:
+        # set up observable
+        full_str, handlers = self.marked[n]
+
+        if callable(v):
+            o = ObservableFunction(v)
+        else:
+            o = ObservableValue(v)
+
+        # TODO: verify that the naming is correct, especially for nested
+        if len(full_str.split(".")) == 1 and full_str == n:
+            for handler in handlers:
+                o.register_handler(handler)
+                if n in handler._observing:
+                    del handler._observing[n]
+                handler._observing[o] = {"type": "reference", "name": n}
+        elif isinstance(v, ContainsObservables):
+            # add next item to marked
+            components = full_str.split(".")
+            next_comps = ".".join(components[1:])
+            add_default_handler_for(next_comps, v, handlers)
+
+            if hasattr(v, components[1]):
+                # this has repetitive adding to marked
+                setup_default_test(v, components[1], object.__getattribute__(v, components[1]))
+
+        object.__setattr__(self, n, o)
+
+
+
+
 class ContainsObservables(object):
     def __init__(self):
+        # Two terrible names, one great price
         object.__setattr__(self, "marked", dict())
+        object.__setattr__(self, "setup", dict())
 
     def _oget(self, n):
         return super().__getattribute__(n)
@@ -12,7 +47,7 @@ class ContainsObservables(object):
 
     def __delattr__(self, n):
         if n in self.marked and hasattr(self, n):
-            # TODO: ignore
+            # TODO: properly ignore
             pass
         object.__delattr__(self, n)
 
@@ -23,29 +58,13 @@ class ContainsObservables(object):
             return object.__getattribute__(self, n)
 
     def __setattr__(self, n, v):
-        if n in self.marked and not hasattr(self, n):
-            # set up observable
-            full_str, handlers = self.marked[n]
-
-            if callable(v):
-                o = ObservableFunction(v)
-            else:
-                o = ObservableValue(v)
-
-            # TODO: verify that the naming is correct, especially for nested
-            for handler in handlers:
-                o.register_handler(handler)
-                if n in handler._observing:
-                    del handler._observing[n]
-                handler._observing[o] = {"type": "reference", "name": n}
-
-            object.__setattr__(self, n, o)
-
+        setup_default_test(self, n, v)
 
         if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
             super().__getattribute__(n).set(v)
         else:
             return super().__setattr__(n, v)
+
 
 class Observable(object):
     def __init__(self):
