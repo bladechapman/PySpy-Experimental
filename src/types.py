@@ -23,6 +23,7 @@ def setup_default_test(self, n, v, full_str, handlers, untouched_str, untouched_
         #     o = v
 
         # object.__setattr__(self, n, o)
+        object.__setattr__(self, n, v)
         for handler in handlers:
             # o.register_handler(handler)
 
@@ -30,7 +31,6 @@ def setup_default_test(self, n, v, full_str, handlers, untouched_str, untouched_
                 handler(new={"name": untouched_str, "value": v}, old={"name":untouched_str, "value": None})
             else:
                 handler(new={"name": untouched_str, "value": v}, old={"name":untouched_str, "value": chained_getattr(untouched_obj, untouched_str)})
-        object.__setattr__(self, n, v)
 
 
 
