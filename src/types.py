@@ -1,40 +1,51 @@
 from .helpers import *
 
 # TODO: clean this up...
-def setup_default_test(self, n, v, full_str, handlers):
+def setup_default_test(self, n, v, full_str, handlers, untouched_str, untouched_obj):
 
-    # print(n, v, handlers)
 
     if len(full_str.split(".")) != 1:
         if isinstance(v, ContainsObservables):
             add_default_handler_for(".".join(full_str.split(".")[1:]), v, handlers)
 
         if hasattr(v, full_str.split(".")[1]):
-            setup_default_test(v, full_str.split(".")[1], getattr(v, full_str.split(".")[1]), ".".join(full_str.split(".")[1:]), handlers)
+            setup_default_test(v, full_str.split(".")[1], getattr(v, full_str.split(".")[1]), ".".join(full_str.split(".")[1:]), handlers, untouched_str, untouched_obj)
 
     # trigger handlers at root
     else:
         # set up observable
-        if not isinstance(v, Observable):
-            if callable(v):
-                o = ObservableFunction(v)
-            else:
-                o = ObservableValue(v)
-        else:
-            o = v
+        # if not isinstance(v, Observable):
+        #     if callable(v):
+        #         o = ObservableFunction(v)
+        #     else:
+        #         o = ObservableValue(v)
+        # else:
+        #     o = v
 
+        # object.__setattr__(self, n, o)
         for handler in handlers:
-            o.register_handler(handler)
-            handler()
+            # o.register_handler(handler)
+
+            if not chained_hasattr(untouched_obj, untouched_str):
+                handler(new={"name": untouched_str, "value": v}, old={"name":untouched_str, "value": None})
+            else:
+                handler(new={"name": untouched_str, "value": v}, old={"name":untouched_str, "value": chained_getattr(untouched_obj, untouched_str)})
+        object.__setattr__(self, n, v)
 
 
 
 def add_default_handler_for(string, obj, handlers):
     components = string.split(".")
-    if components[0] not in obj.marked:
-        obj.marked[components[0]] = dict()
 
-    obj.marked[components[0]][string] = handlers
+    if isinstance(obj, ContainsObservables):
+        if components[0] not in obj.marked:
+            obj.marked[components[0]] = dict()
+
+        obj.marked[components[0]][string] = handlers
+
+        # see if this can be reduced...
+        if len(components) > 1 and hasattr(obj, components[0]):
+            add_default_handler_for(".".join(components[1:]), object.__getattribute__(obj, components[0]), handlers)
 
 
 
@@ -107,7 +118,7 @@ class ContainsObservables(object):
 
         if n in self.marked:
             for full_str in self.marked[n]:
-                setup_default_test(self, n, v, full_str, self.marked[n][full_str])
+                setup_default_test(self, n, v, full_str, self.marked[n][full_str], full_str, self)
 
         if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
             pass

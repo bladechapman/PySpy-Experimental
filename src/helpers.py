@@ -11,14 +11,18 @@ def chained_hasattr(obj, prop_str):
             return False
     return True
 
-def chained_getattr(obj, prop_str):
+def chained_getattr(obj, prop_str, oget=False):
     properties = prop_str.split(".")
     if properties == [""]:
         return obj
 
     for p in properties:
         if hasattr(obj, p):
-            obj = getattr(obj, p)
+            # obj = getattr(obj, p)
+            if oget == True:
+                obj = obj._oget(p)
+            else:
+                obj = getattr(obj, p)
         else:
             raise AttributeError(obj, "does not have attribute", prop_str)
     return obj

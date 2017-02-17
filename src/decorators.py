@@ -112,7 +112,7 @@ def setup(init_func):
         ordering = sorted(observed_ordering.items(), key=operator.itemgetter(1))
 
 
-
+        # print(ordering)
 
 
         # initialize observables in order
@@ -133,16 +133,17 @@ def setup(init_func):
 
 
             # fix references in observed for deferred setup
-            for name in a._observing:
-                observed[name].remove(a)
-                observed[name].add(v)
+            if is_handler(a):
+                for name in a._observing:
+                    observed[name].remove(a)
+                    observed[name].add(v)
 
 
 
 
 
         for observed_name, order in ordering:
-            v = chained_getattr(self, observed_name)
+            v = chained_getattr(self, observed_name, oget=True)
 
             # correct and register handlers...
             for handler in observed[observed_name]:
@@ -170,6 +171,8 @@ def setup(init_func):
             #     print(handler.__func__)
             # print(observee, handlers)
             add_default_handler_for(observee, self, handlers)
+
+
 
 
 
