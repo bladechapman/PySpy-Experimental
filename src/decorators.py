@@ -1,4 +1,4 @@
-from functools import wraps
+from functools import wraps, reduce
 import inspect
 import operator
 from .helpers import *
@@ -80,40 +80,49 @@ def setup(init_func):
         for n, h in unmodified_handler_functions:
             for t in h._observing:
                 if t not in observed:
-                    observed[t] = []
-                observed[t].append(h)
+                    observed[t] = set()
+                observed[t].add(h)
                 observed_type[t] = h._observing[t]["mode"]
 
-        # do something w/ default observations here...
-        # ...
-        for observee in observed:
-            handlers = observed[observee]
-            add_default_handler_for(observee, self, handlers)
+
+
 
 
         observed_functions = {i:observed[i] for i in observed if observed_type[i] != "deferred" and callable(chained_getattr(self, i))}
         observed_attributes = {i:observed[i] for i in observed if observed_type[i] != "deferred" and not callable(chained_getattr(self, i))}
-        root_observed_functions = {i:observed_functions[i] for i in observed_functions if not is_handler(chained_getattr(self, i))}
+        root_observed_functions = {}
+        for func_name in observed_functions:
+            should_add = False
+            if is_handler(chained_getattr(self, func_name)):
+                observing = chained_getattr(self, func_name)._observing
+                statuses = map(lambda x: observing[x]["mode"] == "deferred", observing)
+                should_add = reduce(lambda x, y: x or y, statuses, True)
+            else:
+                should_add = True
+
+            if should_add:
+                root_observed_functions[func_name] = observed_functions[func_name]
         root_observed = {i:observed[i] for i in observed if i in root_observed_functions or i in observed_attributes}
 
-
         # topological sort from root nodes
-        observed_ordering = {i:0 for i in observed}
+        observed_ordering = {i:0 for i in observed if observed_type[i] != "deferred"}
         for i in root_observed:
             for h in observed[i]:
                 top_sort(h, observed_ordering, 1, observed)
         ordering = sorted(observed_ordering.items(), key=operator.itemgetter(1))
 
 
+
+
+
         # initialize observables in order
         for observed_name, order in ordering:
-            if observed_type[observed_name] == "deferred":
-                continue
 
             a = chained_getattr(self, observed_name)
 
             # set observables
             v = chained_getattr(self, observed_name)
+
             if not isinstance(v, Observable):
                 if callable(a):
                     v = ObservableFunction(a)
@@ -122,11 +131,48 @@ def setup(init_func):
                     v = ObservableValue(a)
                     chained_setattr(self, observed_name, v)
 
+
+            # fix references in observed for deferred setup
+            for name in a._observing:
+                observed[name].remove(a)
+                observed[name].add(v)
+
+
+
+
+
+        for observed_name, order in ordering:
+            v = chained_getattr(self, observed_name)
+
             # correct and register handlers...
             for handler in observed[observed_name]:
-                n = handler._observing[observed_name]["name"]
-                del handler._observing[observed_name]
-                handler._observing[v] = {"mode": "reference", "name": n}
+                if isinstance(handler, ObservableFunction):
+                    handler_real = handler.__func__
+                else:
+                    handler_real = handler
+
+                n = handler_real._observing[observed_name]["name"]
+                del handler_real._observing[observed_name]
+                handler_real._observing[v] = {"mode": "reference", "name": n}
                 v.register_handler(handler)
+
+
+
+
+
+
+
+
+        # deferred / default observations
+        for observee in observed:
+            handlers = observed[observee]
+            # for handler in handlers:
+            #     print(handler.__func__)
+            # print(observee, handlers)
+            add_default_handler_for(observee, self, handlers)
+
+
+
+
 
     return modified_init_func

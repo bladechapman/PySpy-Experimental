@@ -1,4 +1,16 @@
 
+def chained_hasattr(obj, prop_str):
+    properties = prop_str.split(".")
+    if properties == [""]:
+        return obj
+
+    for p in properties:
+        if hasattr(obj, p):
+            obj = getattr(obj, p)
+        else:
+            return False
+    return True
+
 def chained_getattr(obj, prop_str):
     properties = prop_str.split(".")
     if properties == [""]:
@@ -19,7 +31,8 @@ def chained_setattr(obj, prop_str, value):
             obj = getattr(obj, p)
         else:
             raise AttributeError(obj, "does not have attribute", prop_str)
-    setattr(obj, properties[-1], value)
+    object.__setattr__(obj, properties[-1], value)
+    # setattr(obj, properties[-1], value)
 
 def is_bound_method(f):
     return hasattr(f, "__self__")
@@ -38,10 +51,3 @@ def top_sort(node, ordering, init_val, observed):
 
     for h in observed[node.__name__]:
         top_sort(h, ordering, init_val + 1, observed)
-
-def add_default_handler_for(string, obj, handlers):
-    components = string.split(".")
-    if components[0] not in obj.marked:
-        obj.marked[components[0]] = dict()
-
-    obj.marked[components[0]] = (string, handlers)

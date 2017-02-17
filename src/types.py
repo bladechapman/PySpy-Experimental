@@ -1,12 +1,21 @@
 from .helpers import *
 
 # TODO: clean this up...
-def setup_default_test(self, n, v):
-    if n in self.marked and n not in self.setup:
-        # set up observable
-        full_str, handlers = self.marked[n]
+def setup_default_test(self, n, v, full_str, handlers):
 
-        if v is not isinstance(v, Observable):
+    # print(n, v, handlers)
+
+    if len(full_str.split(".")) != 1:
+        if isinstance(v, ContainsObservables):
+            add_default_handler_for(".".join(full_str.split(".")[1:]), v, handlers)
+
+        if hasattr(v, full_str.split(".")[1]):
+            setup_default_test(v, full_str.split(".")[1], getattr(v, full_str.split(".")[1]), ".".join(full_str.split(".")[1:]), handlers)
+
+    # trigger handlers at root
+    else:
+        # set up observable
+        if not isinstance(v, Observable):
             if callable(v):
                 o = ObservableFunction(v)
             else:
@@ -14,24 +23,58 @@ def setup_default_test(self, n, v):
         else:
             o = v
 
-        # TODO: verify that the naming is correct, especially for nested
-        if len(full_str.split(".")) == 1 and full_str == n:
-            for handler in handlers:
-                o.register_handler(handler)
-                if n in handler._observing:
-                    del handler._observing[n]
-                handler._observing[o] = {"type": "reference", "name": n}
-        elif isinstance(v, ContainsObservables):
-            # add next item to marked
-            components = full_str.split(".")
-            next_comps = ".".join(components[1:])
-            add_default_handler_for(next_comps, v, handlers)
+        for handler in handlers:
+            o.register_handler(handler)
+            handler()
 
-            if hasattr(v, components[1]):
-                # this has repetitive adding to marked
-                setup_default_test(v, components[1], object.__getattribute__(v, components[1]))
 
-        object.__setattr__(self, n, o)
+
+def add_default_handler_for(string, obj, handlers):
+    components = string.split(".")
+    if components[0] not in obj.marked:
+        obj.marked[components[0]] = dict()
+
+    obj.marked[components[0]][string] = handlers
+
+
+
+    # if string == "handler":
+    #     v = chained_getattr(obj, string)
+    #     o = ObservableFunction(v)
+
+    # try:
+    #     v = chained_getattr(obj, string)
+    #     # # set up observable
+    #
+    #     print(isinstance(v, Observable))
+    #     print(callable(v))
+    #     o= ObservableFunction(v)
+    #
+    #     # if not isinstance(v, Observable):
+    #     #     if callable(v):
+    #     #         o = ObservableFunction(v)
+    #     #     else:
+    #     #         o = ObservableValue(v)
+    #     # else:
+    #     #     o = v
+    #     #
+    #     # print(string, v)
+    #     # print(o)
+    #
+    #
+    # except AttributeError as e:
+    #     print(e)
+    # # try:
+    # #     v = chained_getattr(obj, string)
+    # #     if not isinstance(v, Observable):
+    # #         if callable(v):
+    # #             o = ObservableFunction(v)
+    # #         else:
+    # #             o = ObservableValue(v)
+    # #     else:
+    # #         o = v
+    # # except Exception(e):
+    # #     print(e)
 
 
 
@@ -46,7 +89,7 @@ class ContainsObservables(object):
         return super().__getattribute__(n)
 
     def _oset(self, n, v):
-        super().__getattribute__(n, v)
+        super().__setattr__(n, v)
 
     def __delattr__(self, n):
         if n in self.marked and hasattr(self, n):
@@ -61,10 +104,14 @@ class ContainsObservables(object):
             return object.__getattribute__(self, n)
 
     def __setattr__(self, n, v):
-        setup_default_test(self, n, v)
+
+        if n in self.marked:
+            for full_str in self.marked[n]:
+                setup_default_test(self, n, v, full_str, self.marked[n][full_str])
 
         if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
-            super().__getattribute__(n).set(v)
+            pass
+            # super().__getattribute__(n).set(v)
         else:
             return super().__setattr__(n, v)
 
@@ -85,12 +132,13 @@ class ObservableFunction(Observable):
 
         if is_handler(self.__func__):
             for observee in self.__func__._observing:
-                observee._handlers.remove(self.__func__)
-                observee._handlers.add(self)
+                if not isinstance(observee, str):
+                    observee._handlers.remove(self.__func__)
+                    observee._handlers.add(self)
 
     def __call__(self, *args, **kwargs):
         returned_value = self.__func__(*args, **kwargs)
-
+        # print(self._handlers)
         # invoke _handlers
         for handler in self._handlers:
 
