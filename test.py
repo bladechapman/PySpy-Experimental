@@ -2,35 +2,51 @@
 
 import unittest
 # from tests.test_basic import TestBasicUsage
-from tests.test_class import TestClassUsage
+# from tests.test_class import TestClassUsage
 
 from pyspy import *
 
-# class TestPrototype(unittest.TestCase):
-#     def test_direct_value(self):
-#         test_self = self
-#
-#         class Test(ContainsObservables):
-#             @setup
-#             def __init__(self):
-#                 super().__init__()
-#                 self.value = 3
-#                 self.handler_called = False
-#
-#             @observe("value", is_class=True, deferred=False)
-#             def handler(self, new=None, old=None):
-#                 nonlocal test_self
-#                 test_self.assertEqual(new["name"], "value")
-#                 test_self.assertEqual(old["name"], "value")
-#
-#                 test_self.assertEqual(new["value"], 4)
-#                 test_self.assertEqual(old["value"], 3)
-#                 self.handler_called = True
-#
-#         t = Test()
-#         t.value = 4
-#         self.assertEqual(t.handler_called, True)
-#         self.assertEqual(t.value, 4)
+class TestPrototype(unittest.TestCase):
+    def test_direct_value(self):
+        test_self = self
+
+        class Test(ContainsObservables):
+            @setup
+            def __init__(self):
+                pass
+                # self.value = 3
+
+            @observe("value", is_class=True, deferred=True)
+            def handler(self, new=None, old=None):
+                print("HANDLE", new, old)
+
+            @observe("handler", is_class=True, deferred=False)
+            def handler2(self, new=None, old=None):
+                print("HANDLE2", new, old)
+
+            @observe("handler2", is_class=True, deferred=False)
+            def handler3(self, new=None, old=None):
+                print("HANDLE3", new, old)
+
+        t = Test()
+        print("---")
+        # t.value = 4
+
+        def test(new=None, old=None):
+            print("TEST")
+        # t.value = 5
+
+        t.handler = test
+        print(t.handler)
+
+        # t.handler("abc")
+
+        # print(t._oget("handler"))
+        # print(t.marked["value"]["value"])
+
+        # print(t.marked)
+
+        # t.handler()
 
 
 # class TestPrototype(unittest.TestCase):

@@ -2,8 +2,6 @@ from .helpers import *
 
 # TODO: clean this up...
 def setup_default_test(self, n, v, full_str, handlers, untouched_str, untouched_obj):
-
-
     if len(full_str.split(".")) != 1:
         if isinstance(v, ContainsObservables):
             add_default_handler_for(".".join(full_str.split(".")[1:]), v, handlers)
@@ -13,19 +11,8 @@ def setup_default_test(self, n, v, full_str, handlers, untouched_str, untouched_
 
     # trigger handlers at root
     else:
-        # set up observable
-        # if not isinstance(v, Observable):
-        #     if callable(v):
-        #         o = ObservableFunction(v)
-        #     else:
-        #         o = ObservableValue(v)
-        # else:
-        #     o = v
-
-        # object.__setattr__(self, n, o)
         object.__setattr__(self, n, v)
         for handler in handlers:
-            # o.register_handler(handler)
 
             if not chained_hasattr(untouched_obj, untouched_str):
                 handler(new={"name": untouched_str, "value": v}, old={"name":untouched_str, "value": None})
@@ -49,53 +36,7 @@ def add_default_handler_for(string, obj, handlers):
 
 
 
-    # if string == "handler":
-    #     v = chained_getattr(obj, string)
-    #     o = ObservableFunction(v)
-
-    # try:
-    #     v = chained_getattr(obj, string)
-    #     # # set up observable
-    #
-    #     print(isinstance(v, Observable))
-    #     print(callable(v))
-    #     o= ObservableFunction(v)
-    #
-    #     # if not isinstance(v, Observable):
-    #     #     if callable(v):
-    #     #         o = ObservableFunction(v)
-    #     #     else:
-    #     #         o = ObservableValue(v)
-    #     # else:
-    #     #     o = v
-    #     #
-    #     # print(string, v)
-    #     # print(o)
-    #
-    #
-    # except AttributeError as e:
-    #     print(e)
-    # # try:
-    # #     v = chained_getattr(obj, string)
-    # #     if not isinstance(v, Observable):
-    # #         if callable(v):
-    # #             o = ObservableFunction(v)
-    # #         else:
-    # #             o = ObservableValue(v)
-    # #     else:
-    # #         o = v
-    # # except Exception(e):
-    # #     print(e)
-
-
-
-
 class ContainsObservables(object):
-    def __init__(self):
-        # Two terrible names, one great price
-        object.__setattr__(self, "marked", dict())
-        object.__setattr__(self, "setup", dict())
-
     def _oget(self, n):
         return super().__getattribute__(n)
 
@@ -116,13 +57,77 @@ class ContainsObservables(object):
 
     def __setattr__(self, n, v):
 
+        # goal is to properly reconstruct observable chain if attrib is in marked
+        # at this point, all observables are set up...
         if n in self.marked:
-            for full_str in self.marked[n]:
-                setup_default_test(self, n, v, full_str, self.marked[n][full_str], full_str, self)
+            # print("ATTEMPTING TO SET MARKED ATTRIB")
+            # does the obj even have the value currently?
+            # print("Does the attrib even exist yet?")
+            # print("\t", hasattr(self, n))
+
+            # set up new value
+            has_handlers = len(self.marked[n][n]) > 0
+            new_v = v
+            if has_handlers:
+                if callable(v):
+                    new_v = ObservableFunction(v)
+                else:
+                    new_v = ObservableValue(v)
+
+
+            # two directions to think about here...
+
+            #   is this value a handler for something else?
+            #       if it's handler something that's deferred, will need to change marked as well
+            # print("--Is this value a handler for something else?")
+            if hasattr(self, n) and (is_handler(getattr(self, n)) or is_handler(getattr(self, n).__func__)):
+                candidate = getattr(self, n)
+                if isinstance(candidate, ObservableFunction):
+                    candidate = candidate.__func__
+                # print("\t", candidate._observing)
+                v._observing = candidate._observing
+                for attempted_observable in candidate._observing:
+                    mode = candidate._observing[attempted_observable]["mode"]
+                    name = candidate._observing[attempted_observable]["name"]
+                    if mode == "deferred":
+                        # print("\t\t\t", self.marked[attempted_observable][name])
+                        self.marked[attempted_observable][name].remove(getattr(self, n))
+                        self.marked[attempted_observable][name].add(new_v)
+                    else:
+                        attempted_observable.deregister_handler(getattr(self, n))
+                        attempted_observable.register_handler(new_v)
+
+            #   who are the handlers of this value?
+            # print("--Who are the handlers of this value?")
+            # print("\t", self.marked[n][n])
+            for handler in self.marked[n][n]:
+                # print("\t\t", handler)
+                if isinstance(handler, ObservableFunction):
+                    observing = handler.__func__._observing
+                else:
+                    observing = handler._observing
+
+                # TODO: verify this operation works w/ deferred / str types
+                # for those who are observing this val, update their references
+                candidate = n
+                if hasattr(self, n):
+                    candidate = getattr(self, n)
+                observing[new_v] = observing[candidate]
+                del observing[candidate]
+
+                # register the handlers onto the new observable
+                new_v.register_handler(handler)
+
+
+
+        # TODO: SET
+        super().__setattr__(n, new_v)
+
+
 
         if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
-            pass
-            # super().__getattribute__(n).set(v)
+            # pass
+            super().__getattribute__(n).set(v)
         else:
             return super().__setattr__(n, v)
 
@@ -134,6 +139,8 @@ class Observable(object):
     def register_handler(self, f):
         self._handlers.add(f)
 
+    def deregister_handler(self, f):
+        self._handlers.remove(f)
 
 class ObservableFunction(Observable):
     def __init__(self, f):
@@ -141,9 +148,10 @@ class ObservableFunction(Observable):
         self.__func__ = f
         self._old_ret = None
 
+        # for all the observables this is observing, change reference to self
         if is_handler(self.__func__):
             for observee in self.__func__._observing:
-                if not isinstance(observee, str):
+                if self.__func__._observing[observee]["mode"] != "deferred":
                     observee._handlers.remove(self.__func__)
                     observee._handlers.add(self)
 
