@@ -55,7 +55,9 @@ class ContainsObservables(object):
         else:
             return object.__getattribute__(self, n)
 
+    # TODO: clean this up
     def __setattr__(self, n, v):
+        new_v = v
 
         # goal is to properly reconstruct observable chain if attrib is in marked
         # at this point, all observables are set up...
@@ -66,8 +68,8 @@ class ContainsObservables(object):
             # print("\t", hasattr(self, n))
 
             # set up new value
-            has_handlers = len(self.marked[n][n]) > 0
-            new_v = v
+
+            has_handlers = n in self.marked[n] and len(self.marked[n][n]) > 0
             if has_handlers:
                 if callable(v):
                     new_v = ObservableFunction(v)
@@ -80,7 +82,7 @@ class ContainsObservables(object):
             #   is this value a handler for something else?
             #       if it's handler something that's deferred, will need to change marked as well
             # print("--Is this value a handler for something else?")
-            if hasattr(self, n) and (is_handler(getattr(self, n)) or is_handler(getattr(self, n).__func__)):
+            if hasattr(self, n) and callable(getattr(self, n)) and (is_handler(getattr(self, n)) or is_handler(getattr(self, n).__func__)):
                 candidate = getattr(self, n)
                 if isinstance(candidate, ObservableFunction):
                     candidate = candidate.__func__
@@ -97,26 +99,29 @@ class ContainsObservables(object):
                         attempted_observable.deregister_handler(getattr(self, n))
                         attempted_observable.register_handler(new_v)
 
+
             #   who are the handlers of this value?
             # print("--Who are the handlers of this value?")
             # print("\t", self.marked[n][n])
-            for handler in self.marked[n][n]:
-                # print("\t\t", handler)
-                if isinstance(handler, ObservableFunction):
-                    observing = handler.__func__._observing
-                else:
-                    observing = handler._observing
+            if has_handlers:
+                for handler in self.marked[n][n]:
+                    # print("\t\t", handler)
+                    if isinstance(handler, ObservableFunction):
+                        observing = handler.__func__._observing
+                    else:
+                        observing = handler._observing
 
-                # TODO: verify this operation works w/ deferred / str types
-                # for those who are observing this val, update their references
-                candidate = n
-                if hasattr(self, n):
-                    candidate = getattr(self, n)
-                observing[new_v] = observing[candidate]
-                del observing[candidate]
+                    # TODO: verify this operation works w/ deferred / str types
+                    # for those who are observing this val, update their references
+                    candidate = n
+                    if hasattr(self, n):
+                        candidate = object.__getattribute__(self, n)
 
-                # register the handlers onto the new observable
-                new_v.register_handler(handler)
+                    observing[new_v] = observing[candidate]
+                    del observing[candidate]
+
+                    # register the handlers onto the new observable
+                    new_v.register_handler(handler)
 
 
 
@@ -124,11 +129,10 @@ class ContainsObservables(object):
         super().__setattr__(n, new_v)
 
 
-
         if hasattr(self, n) and isinstance(super().__getattribute__(n), ObservableValue):
             # pass
             super().__getattribute__(n).set(v)
-        else:
+        elif n not in self.marked:
             return super().__setattr__(n, v)
 
 

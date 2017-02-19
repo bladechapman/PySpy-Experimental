@@ -7,7 +7,36 @@ import unittest
 from pyspy import *
 
 class TestPrototype(unittest.TestCase):
-    def test_direct_value(self):
+    def test_nested(self):
+        class Test2(ContainsObservables):
+            @setup
+            def __init__(self):
+                self.value2 = 3
+
+        class Test(ContainsObservables):
+            @setup
+            def __init__(self):
+                self.value1 = Test2()
+
+            @observe("value1.value2", is_class=True, deferred=False)
+            def handler(self, old=None, new=None):
+                print("HANDLE")
+
+        t = Test()
+        print(t.marked)
+        print(t.value1.marked)
+        # print("----")
+        t.value1 = Test2()
+        print(t.marked)
+        print(t.value1.marked)
+        #
+        #
+        #
+        # t.value1.value2 = 5
+
+        # print(object.__getattribute__(t.value1, "value2"))
+
+    def _test_direct_value(self):
         test_self = self
 
         class Test(ContainsObservables):
@@ -30,23 +59,8 @@ class TestPrototype(unittest.TestCase):
 
         t = Test()
         print("---")
-        # t.value = 4
 
-        def test(new=None, old=None):
-            print("TEST")
-        # t.value = 5
-
-        t.handler = test
-        print(t.handler)
-
-        # t.handler("abc")
-
-        # print(t._oget("handler"))
-        # print(t.marked["value"]["value"])
-
-        # print(t.marked)
-
-        # t.handler()
+        t.value = 6
 
 
 # class TestPrototype(unittest.TestCase):
