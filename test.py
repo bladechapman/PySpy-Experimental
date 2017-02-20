@@ -29,6 +29,8 @@ class TestPrototype(unittest.TestCase):
         t.value1 = Test2()
         print(t.marked)
         print(t.value1.marked)
+        print("---")
+        t.value1.value2 = 5
         #
         #
         #
