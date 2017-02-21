@@ -17,20 +17,26 @@ class TestPrototype(unittest.TestCase):
             @setup
             def __init__(self):
                 self.value1 = Test2()
+                pass
 
             @observe("value1.value2", is_class=True, deferred=False)
             def handler(self, old=None, new=None):
                 print("HANDLE")
 
         t = Test()
-        print(t.marked)
-        print(t.value1.marked)
+        # print(t.marked)
+        # print(t.value1.marked)
         # print("----")
+
+        # print("\t\t\t", t.value1._oget("value2"))
+
         t.value1 = Test2()
         print(t.marked)
         print(t.value1.marked)
         print("---")
-        t.value1.value2 = 5
+
+        # print(t.value1._oget("value2")._handlers)
+        # t.value1.value2 = 5
         #
         #
         #
